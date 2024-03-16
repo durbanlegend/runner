@@ -155,7 +155,6 @@ pub(crate) fn dlib_or_prog(
 #[allow(clippy::too_many_arguments)]
 // Compiles a program
 pub fn program(
-    b: impl Fn(&str) -> bool,
     exe_path: &PathBuf,
     args: &Args<'_>,
     verbose: bool,
@@ -164,6 +163,7 @@ pub fn program(
     externs: Vec<String>,
     exe_suffix: &str,
 ) -> ControlFlow<()> {
+    let b = |p: &str| args.get_bool(p);
     if b("run") {
         if !exe_path.exists() {
             args.quit(&format!("program {exe_path:?} does not exist"));

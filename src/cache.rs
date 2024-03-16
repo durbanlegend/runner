@@ -316,17 +316,15 @@ pub fn get_aliases() -> HashMap<String, String> {
         .to_map()
 }
 
-pub fn static_cache_ops(
-    args: &Args<'_>,
-    program_contents: &Option<String>,
-    b: impl Fn(&str) -> bool,
-) -> ControlFlow<()> {
+pub fn static_cache_ops(args: &Args<'_>, rs_file_contents: &Option<String>) -> ControlFlow<()> {
+    let b = |p: &str| args.get_bool(p);
+
     let verbose = b("verbose");
 
     let crates = args.get_strings("add");
     if !crates.is_empty() {
         create_static(&crates);
-        if program_contents.is_none() {
+        if rs_file_contents.is_none() {
             return ControlFlow::Break(());
         }
     }
@@ -391,7 +389,7 @@ pub fn dynamic_crate_ops(
     args: &Args<'_>,
     print_path: bool,
     compile: bool,
-    file_res: &Option<PathBuf>,
+    maybe_src_path: &Option<PathBuf>,
 ) -> ControlFlow<()> {
     let mut state = State::dll(optimized, edition);
     // plain-jane name is a crate name!
@@ -437,7 +435,7 @@ pub fn dynamic_crate_ops(
         }
     } else {
         if compile {
-            if let Some(file) = file_res {
+            if let Some(file) = maybe_src_path {
                 if !file.exists() {
                     args.quit("no such file or directory for crate compile");
                 }

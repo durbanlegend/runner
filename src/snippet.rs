@@ -138,3 +138,57 @@ fn main() {{
     }
     (massaged_code, deduced_externs)
 }
+
+use super::bool_var;
+
+use lapp::Args;
+
+pub(crate) fn snippet_to_program<'a>(
+    args: &Args<'a>,
+    code: &str,
+    edition: &str,
+    externs: &'a mut Vec<String>,
+    prelude: String,
+) -> String {
+    let edition: &str = edition;
+    let externs: &mut Vec<String> = externs;
+    let mut extern_crates = args.get_strings("extern");
+    eprintln!("0. extern_crates from args.get_strings(\"extern\")={extern_crates:?}");
+    extern_crates.dedup();
+    // Sometimes seems to happen with lapp.
+    let wild_crates = args.get_strings("wild");
+    let macro_crates = args.get_strings("macro");
+    if !wild_crates.is_empty() {
+        extern_crates.extend(wild_crates.iter().cloned());
+    }
+    if !macro_crates.is_empty() {
+        extern_crates.extend(macro_crates.iter().cloned());
+    }
+    let macro_crates: HashSet<_> = macro_crates.into_iter().collect();
+
+    let mut prepend = args.get_string("prepend");
+    if !prepend.is_empty() {
+        prepend = prepend.replace("\\n", "\n"); // Issue #5: undo escaping to restore what the user entered
+        prepend.push(';');
+        prepend.push('\n'); // Issue #5 Add a line feed to separate extra section from body
+    }
+    let maybe_prelude = if bool_var("no-prelude", args) {
+        String::new()
+    } else {
+        prelude
+    };
+
+    let (massaged_code, deduced_externs) = massage_snippet(
+        code,
+        maybe_prelude,
+        extern_crates,
+        wild_crates,
+        &macro_crates,
+        &prepend,
+        edition > "2015",
+        bool_var("verbose", args),
+    );
+    eprintln!("1. deduced_externs = {deduced_externs:?}");
+    *externs = deduced_externs;
+    massaged_code
+}
